@@ -110,9 +110,15 @@ while True:
         break
         
     elif chose == "4":
-        print(f"\n{YELLOW}[+] Booting Remote Control Engine Protocol...{RESET}")
-        print(f"{CYAN}[*] Listening for incoming browser actions. Press CTRL+C to close listener.{RESET}")
-        input(f"\n{WHITE}Press Enter to continue...{RESET}")
+    print(f"\n{YELLOW}[+] Booting Local Web Server...{RESET}")
+    import http.server
+    import socketserver
+    PORT = 8080
+    Handler = http.server.SimpleHTTPRequestHandler
+    print(f"{GREEN}[*] Server started at http://127.0.0.1:{PORT}{RESET}")
+    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+        httpd.serve_forever()
+
         
     elif chose == "5":
         print(f"\n{CYAN}[*] Parsing logs...{RESET}\n")
